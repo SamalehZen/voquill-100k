@@ -24,6 +24,8 @@ const DEFAULT_ICON_SIZE: u32 = 128;
 pub struct CurrentAppInfo {
     pub app_name: String,
     pub icon_base64: String,
+    pub browser_url: Option<String>,
+    pub domain: Option<String>,
 }
 
 #[derive(Debug, Error)]
@@ -40,7 +42,7 @@ pub enum AppInfoError {
     Encode(String),
 }
 
-pub fn get_current_app_info() -> Result<CurrentAppInfo, AppInfoError> {
+pub async fn get_current_app_info() -> Result<CurrentAppInfo, AppInfoError> {
     let config = FocusTrackerConfig::new().with_icon_size(DEFAULT_ICON_SIZE);
     let icon_size = config.icon.get_size_or_default();
     let tracker = FocusTracker::with_config(config.clone());
@@ -59,7 +61,7 @@ pub fn get_current_app_info() -> Result<CurrentAppInfo, AppInfoError> {
         .map_err(map_focus_error)?;
 
     let window = captured.ok_or(AppInfoError::NotAvailable)?;
-    build_app_info(window, icon_size)
+    build_app_info(window, icon_size).await
 }
 
 fn map_focus_error(err: ferrous_focus::FerrousFocusError) -> AppInfoError {
@@ -77,9 +79,20 @@ fn map_focus_error(err: ferrous_focus::FerrousFocusError) -> AppInfoError {
     }
 }
 
-fn build_app_info(window: FocusedWindow, icon_size: u32) -> Result<CurrentAppInfo, AppInfoError> {
+async fn build_app_info(
+    window: FocusedWindow,
+    icon_size: u32,
+) -> Result<CurrentAppInfo, AppInfoError> {
     let mut window = window;
     let app_name = resolve_app_name(&window);
+
+    let (browser_url, domain) = if super::browser_url::is_supported_browser(&app_name) {
+        let url = super::browser_url::get_browser_url(&app_name).await;
+        let domain = url.as_ref().and_then(super::browser_url::extract_domain);
+        (url, domain)
+    } else {
+        (None, None)
+    };
 
     let icon = window
         .icon
@@ -90,6 +103,8 @@ fn build_app_info(window: FocusedWindow, icon_size: u32) -> Result<CurrentAppInf
     Ok(CurrentAppInfo {
         app_name,
         icon_base64: general_purpose::STANDARD.encode(encoded_icon),
+        browser_url,
+        domain,
     })
 }
 

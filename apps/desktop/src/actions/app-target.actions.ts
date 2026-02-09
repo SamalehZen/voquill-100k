@@ -88,6 +88,8 @@ export const setAppTargetPasteKeybind = async (
 type CurrentAppInfoResponse = {
   appName: string;
   iconBase64: string;
+  browserUrl: string | null;
+  domain: string | null;
 };
 
 export const tryRegisterCurrentAppTarget = async (): Promise<
@@ -95,7 +97,10 @@ export const tryRegisterCurrentAppTarget = async (): Promise<
 > => {
   const appInfo = await invoke<CurrentAppInfoResponse>("get_current_app_info");
   const appName = appInfo.appName?.trim() ?? "";
-  const appTargetId = normalizeAppTargetId(appName);
+
+  const targetName = appInfo.domain ?? appName;
+  const displayName = appInfo.domain ?? appName;
+  const appTargetId = normalizeAppTargetId(targetName);
   const existingApp = getRec(getAppState().appTargetById, appTargetId);
 
   const shouldRegisterAppTarget = !existingApp || !existingApp.iconPath;
@@ -117,7 +122,7 @@ export const tryRegisterCurrentAppTarget = async (): Promise<
     try {
       const params = {
         id: appTargetId,
-        name: appName,
+        name: displayName,
         toneId: existingApp?.toneId ?? null,
         iconPath: iconPath ?? existingApp?.iconPath ?? null,
         pasteKeybind: existingApp?.pasteKeybind ?? null,

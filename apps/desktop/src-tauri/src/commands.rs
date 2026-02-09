@@ -38,6 +38,8 @@ pub struct StartRecordingResponse {
 pub struct CurrentAppInfoResponse {
     pub app_name: String,
     pub icon_base64: String,
+    pub browser_url: Option<String>,
+    pub domain: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -294,11 +296,14 @@ pub fn request_accessibility_permission() -> Result<crate::domain::PermissionSta
 }
 
 #[tauri::command]
-pub fn get_current_app_info() -> Result<CurrentAppInfoResponse, String> {
+pub async fn get_current_app_info() -> Result<CurrentAppInfoResponse, String> {
     crate::platform::app_info::get_current_app_info()
+        .await
         .map(|info| CurrentAppInfoResponse {
             app_name: info.app_name,
             icon_base64: info.icon_base64,
+            browser_url: info.browser_url,
+            domain: info.domain,
         })
         .map_err(|err| err.to_string())
 }
