@@ -53,6 +53,7 @@ pub use macos::keyboard_language;
 pub use windows::keyboard_language;
 
 pub mod app_info;
+pub mod browser_url;
 
 pub mod audio;
 pub mod whisper;
